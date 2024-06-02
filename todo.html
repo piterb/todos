@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO List</title>
+	<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script type="text/babel">
+        const TodoList = () => {
+            const [tasks, setTasks] = React.useState([
+                { id: 1, text: 'Task 1', completed: false },
+                { id: 2, text: 'Task 2', completed: false },
+                { id: 3, text: 'Task 99', completed: true }
+            ]);
+            const [newTask, setNewTask] = React.useState('');
+            const [editingTask, setEditingTask] = React.useState(null);
+
+            const addTask = () => {
+                if (newTask.trim() !== '') {
+                    setTasks([{ id: tasks.length + 1, text: newTask, completed: false }, ...tasks]);
+                    setNewTask('');
+                }
+            };
+
+            const deleteTask = (id) => {
+                setTasks(tasks.filter((task) => task.id !== id));
+            };
+
+            const toggleCompletion = (id) => {
+                setTasks(
+                    tasks.map((task) =>
+                        task.id === id ? { ...task, completed: !task.completed } : task
+                    )
+                );
+            };
+
+            const startEditing = (id) => {
+                setEditingTask(id);
+            };
+
+            const saveEditing = (id, newText) => {
+                setTasks(
+                    tasks.map((task) => (task.id === id ? { ...task, text: newText } : task))
+                );
+                setEditingTask(null);
+            };
+
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            };
+
+            React.useEffect(() => {
+                const list = document.getElementById('task-list');
+                list.addEventListener('dragstart', handleDragStart);
+                list.addEventListener('dragover', handleDragOver);
+                list.addEventListener('drop', handleDrop);
+
+                return () => {
+                    list.removeEventListener('dragstart', handleDragStart);
+                    list.removeEventListener('dragover', handleDragOver);
+                    list.removeEventListener('drop', handleDrop);
+                };
+            }, [tasks]);
+
+            const handleDragStart = (e) => {
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData('text');
+                const targetId = e.target.closest('li').dataset.id;
+                if (draggedId !== targetId) {
+                    const reorderedTasks = [...tasks];
+                    const draggedIndex = reorderedTasks.findIndex((task) => task.id === +draggedId);
+                    const targetIndex = reorderedTasks.findIndex((task) => task.id === +targetId);
+                    const [draggedTask] = reorderedTasks.splice(draggedIndex, 1);
+                    reorderedTasks.splice(targetIndex, 0, draggedTask);
+                    setTasks(reorderedTasks);
+                }
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-white p-4 rounded-lg shadow-lg">
+                    <h2 className="text-xl font-bold mb-4">TODO LIST</h2>
+                    <div className="flex mb-4">
+                        <input
+                            type="text"
+                            value={newTask}
+                            onChange={(e) => setNewTask(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className="flex-grow p-2 border border-gray-300 rounded-l-lg"
+                            placeholder="Task name..."
+                        />
+                        <button
+                            onClick={addTask}
+                            className="bg-blue-500 text-white p-2 rounded-r-lg"
+                        >
+                            +
+                        </button>
+                    </div>
+                    <ul id="task-list">
+                        {tasks.map((task) => (
+                            <li
+                                key={task.id}
+                                data-id={task.id}
+                                className="flex items-center justify-between mb-2 bg-gray-100 p-2 rounded"
+                                draggable
+                            >
+                                <div className="flex items-center">
+                                    <span className="cursor-move">≡</span>
+                                    {editingTask === task.id ? (
+                                        <input
+                                            type="text"
+                                            defaultValue={task.text}
+                                            onBlur={(e) => saveEditing(task.id, e.target.value)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') saveEditing(task.id, e.target.value);
+                                            }}
+                                            className="ml-2 p-2 border border-gray-300 rounded"
+                                        />
+                                    ) : (
+                                        <span
+                                            className={`ml-2 cursor-pointer ${task.completed ? 'line-through text-gray-500' : ''}`}
+                                            onClick={() => startEditing(task.id)}
+                                        >
+                                            {task.text}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={task.completed}
+                                        onChange={() => toggleCompletion(task.id)}
+                                        className="mr-2"
+                                    />
+                                    <button
+                                        onClick={() => deleteTask(task.id)}
+                                        className="text-red-500 hover:text-red-700"
+                                    >
+                                        🗑
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<TodoList />, document.getElementById('root'));
+    </script>
+</body>
+</html>
